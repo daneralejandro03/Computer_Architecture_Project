@@ -1,45 +1,28 @@
 package Models;
+import java.util.List;
 
 public class CPU {
-    private ControlUnit controlUnit;
-    private ALU alu;
+    private ALU alu = new ALU();
+    private ControlUnit controlUnit = new ControlUnit();
+    private ControlWiredOrMicro controlType = new ControlWiredOrMicro();
+    private ProgramCounter pc = new ProgramCounter();
+    private MAR mar = new MAR();
+    private IR ir = new IR();
+    private MBR mbr = new MBR();
+    private RegisterFile registerFile = new RegisterFile();
     private Memory memory;
+    private Bus bus = new Bus();
+    private InterruptManager interruptManager = new InterruptManager();
+    private AddressingMode addressingMode;
+    private List<IODevice> ioDevices;
 
-    public CPU(ControlUnit controlUnit, ALU alu, Memory memory) {
-        this.controlUnit = controlUnit;
-        this.alu = alu;
-        this.memory = memory;
+    public CPU(Memory mem, AddressingMode addrMode, List<IODevice> devices) {
+        this.memory = mem;
+        this.addressingMode = addrMode;
+        this.ioDevices = devices;
     }
 
-    public ControlUnit getControlUnit() {
-        return controlUnit;
-    }
-
-    public ALU getAlu() {
-        return alu;
-    }
-
-    public Memory getMemory() {
-        return memory;
-    }
-
-    /**
-     * Método para ejecutar un programa: carga las instrucciones en memoria y
-     * luego inicia el ciclo de fetch, decode, execute.
-     */
-    public void execute(Program program) {
-        // Cargar el programa en la memoria
-        memory.setInstructions(program.getInstructions());
-
-        System.out.println("=== Iniciando ejecución del programa ===");
-        // Recorremos las instrucciones
-        for (int i = 0; i < program.getInstructions().size(); i++) {
-            Instruction instr = controlUnit.fetch(i);
-            if (instr != null) {
-                controlUnit.decode(instr);
-                controlUnit.execute(instr);
-            }
-        }
-        System.out.println("=== Fin de la ejecución del programa ===");
+    public void executeCycle() {
+        // Implementar ciclo de ejecución de la CPU
     }
 }
