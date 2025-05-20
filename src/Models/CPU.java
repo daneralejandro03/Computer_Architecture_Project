@@ -1,34 +1,41 @@
 package Models;
 
-import Enums.OpCode;
+import Enums.OpCode; // Asegúrate que este enum existe y está en la ruta correcta (ej. src/Enums/OpCode.java)
+import java.util.ArrayList; // Para el método loadNewProgram
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.Map;    // Necesario para el microprograma
+import java.util.HashMap; // Necesario para el microprograma
 
 public class CPU {
-    // ... (tus campos existentes: alu, controlType, controlUnit, pc, mar, ir, etc.) ...
     private ALU alu = new ALU();
-    private ControlWiredOrMicro controlType = new ControlWiredOrMicro();
-    private ControlUnit controlUnit = new ControlUnit(controlType);
+    private ControlWiredOrMicro controlType = new ControlWiredOrMicro(); // Se inicializa aquí
+    private ControlUnit controlUnit = new ControlUnit(controlType);      // Usa la instancia controlType
     private ProgramCounter pc = new ProgramCounter();
     private MAR mar = new MAR();
     private IR ir = new IR();
     private MBR mbr = new MBR();
     private RegisterFile registerFile = new RegisterFile();
-    private Memory memory;
+    private Memory memory; // Se asigna en el constructor
     private Bus bus = new Bus();
     private InterruptManager interruptManager = new InterruptManager();
-    private AddressingMode addressingMode;
-    private List<IODevice> ioDevices;
-    private List<String> instructionMemory;
+    private AddressingMode addressingMode; // Se asigna en el constructor
+    private List<IODevice> ioDevices;       // Se asigna en el constructor
+    private List<String> instructionMemory = new ArrayList<>(); // Inicializar para evitar null si se llama a loadNewProgram antes
     private boolean halted = false;
 
-    public CPU(Memory mem, AddressingMode addrMode, List<IODevice> devices, List<String> instructions) {
+
+    public CPU(Memory mem, AddressingMode addrMode, List<IODevice> devices, List<String> initialInstructions) {
         this.memory = mem;
         this.addressingMode = addrMode;
         this.ioDevices = devices;
-        this.instructionMemory = instructions;
+        // this.instructionMemory se cargará con loadNewProgram o se puede inicializar aquí
+        if (initialInstructions != null) {
+            this.instructionMemory = new ArrayList<>(initialInstructions);
+        } else {
+            this.instructionMemory = new ArrayList<>();
+        }
 
+        // Cargar el microprograma de ejemplo en controlType
         Map<String, String[]> microprogramData = new HashMap<>();
         microprogramData.put("MOV_IMM", new String[]{
                 "PC_out, MAR_in, Read_Instruction_Memory", "Memory_data_to_MBR (simulated)",
@@ -45,23 +52,52 @@ public class CPU {
         microprogramData.put("ADD", new String[]{
                 "Decode_Registers", "Reg1_to_ALU_A", "Reg2_to_ALU_B",
                 "ALU_Perform_ADD", "ALU_Result_to_Reg3"});
+        // Añade más mnemónicos y sus señales aquí...
+
         this.controlType.loadMicroprogram(microprogramData);
-        this.halted = false;
+        this.halted = false; // Asegurar que halted esté en false al inicio.
     }
+
+    /**
+     * Carga un nuevo programa en la memoria de instrucciones y resetea el estado de la CPU.
+     * @param newInstructions La lista de nuevas instrucciones a cargar.
+     */
+    public void loadNewProgram(List<String> newInstructions) {
+        if (newInstructions == null) {
+            this.instructionMemory = new ArrayList<>();
+        } else {
+            this.instructionMemory = new ArrayList<>(newInstructions); // Usar una nueva copia defensiva
+        }
+        this.pc.reset();         // Reiniciar el contador de programa a 0
+        this.halted = false;       // Asegurar que la CPU no esté detenida
+        if (this.ir != null) this.ir.clear(); // Limpiar el registro de instrucción
+        if (this.registerFile != null) this.registerFile.clear(); // Opcional: Limpiar registros generales
+        if (this.interruptManager != null && this.interruptManager.queue != null) {
+            this.interruptManager.queue.clear(); // Limpiar interrupciones pendientes
+        }
+        // Considera resetear MBR, MAR, y ALU flags si es necesario para un estado limpio.
+        // if (this.mbr != null) this.mbr.clear();
+        // if (this.mar != null) this.mar.reset();
+        // if (this.alu != null) { /* reset ALU flags si tiene un método para ello */ }
+
+        System.out.println("[CPU] Nuevo programa cargado (" + this.instructionMemory.size() + " instrucciones). PC reseteado. CPU lista.");
+    }
+
 
     public boolean isHalted() {
         return halted;
     }
 
     public void executeCycle() {
-        // ... (tu lógica de executeCycle existente y robusta) ...
         if (halted) {
-            System.out.println("[CPU] Halted. No more cycles will be executed.");
+            // Ya no se imprime aquí si el bucle principal en Main lo maneja.
+            // Pero si se llama directamente, es una buena guarda.
+            // System.out.println("[CPU] Halted. No more cycles will be executed.");
             return;
         }
         try {
             // FETCH
-            int currentPC = pc.get();
+            int currentPC = pc.get(); //
             mar.load(currentPC);
             int instructionAddress = mar.get();
             String rawInstruction = memoryReadInstruction(instructionAddress);
@@ -78,15 +114,15 @@ public class CPU {
             }
 
             mbr.load(rawInstruction.hashCode());
-            ir.load(rawInstruction);
+            ir.load(rawInstruction); //
 
-            System.out.println("[CPU] FETCH PC=" + currentPC + " IR=\"" + rawInstruction + "\"");
+            System.out.println("[CPU] FETCH PC=" + currentPC + " IR=\"" + ir.get() + "\""); //
 
-            pc.increment();
+            pc.increment(); //
 
             // DECODE
-            String mnemonic = controlUnit.decode(ir);
-            controlUnit.generateSignals(mnemonic);
+            String mnemonic = controlUnit.decode(ir); //
+            controlUnit.generateSignals(mnemonic); //
 
             // EXECUTE
             String[] parts = rawInstruction.trim().split("\\s+");
@@ -98,11 +134,11 @@ public class CPU {
                         System.err.println("[CPU] Instrucción " + mnemonic + " inválida: " + rawInstruction);
                         this.halted = true; break;
                     }
-                    int a = registerFile.read(parts[1]);
-                    int b = registerFile.read(parts[2]);
-                    OpCode op = OpCode.valueOf(mnemonic);
-                    int res = alu.operate(op, a, b);
-                    registerFile.write(parts[3], res);
+                    int a = registerFile.read(parts[1]); //
+                    int b = registerFile.read(parts[2]); //
+                    OpCode op = OpCode.valueOf(mnemonic); //
+                    int res = alu.operate(op, a, b); //
+                    registerFile.write(parts[3], res); //
                     System.out.printf("[CPU] %s %s(%d) %s(%d) -> %s(%d)%n",
                             mnemonic, parts[1], a, parts[2], b, parts[3], res);
                     break;
@@ -112,9 +148,9 @@ public class CPU {
                         System.err.println("[CPU] Instrucción NOT inválida: " + rawInstruction);
                         this.halted = true; break;
                     }
-                    int a = registerFile.read(parts[1]);
-                    int res = alu.operate(OpCode.NOT, a, 0);
-                    registerFile.write(parts[2], res);
+                    int a = registerFile.read(parts[1]); //
+                    int res = alu.operate(OpCode.NOT, a, 0); //
+                    registerFile.write(parts[2], res); //
                     System.out.printf("[CPU] NOT %s(%d) -> %s(%d)%n", parts[1], a, parts[2], res);
                     break;
                 }
@@ -123,8 +159,8 @@ public class CPU {
                         System.err.println("[CPU] Instrucción MOV_REG inválida: " + rawInstruction);
                         this.halted = true; break;
                     }
-                    int val = registerFile.read(parts[1]);
-                    registerFile.write(parts[2], val);
+                    int val = registerFile.read(parts[1]); //
+                    registerFile.write(parts[2], val); //
                     System.out.printf("[CPU] MOV_REG %s(%d) -> %s%n", parts[1], val, parts[2]);
                     break;
                 }
@@ -135,7 +171,7 @@ public class CPU {
                     }
                     try {
                         int imm = Integer.parseUnsignedInt(parts[2]);
-                        registerFile.write(parts[1], imm);
+                        registerFile.write(parts[1], imm); //
                         System.out.printf("[CPU] MOV_IMM %d -> %s%n", imm, parts[1]);
                     } catch (NumberFormatException e) {
                         System.err.println("[CPU] Valor inmediato inválido para MOV_IMM: " + parts[2] + " en \"" + rawInstruction + "\"");
@@ -150,12 +186,12 @@ public class CPU {
                     }
                     try {
                         int baseAddr = Integer.parseInt(parts[2]);
-                        int effectiveAddr = this.addressingMode.resolve(baseAddr, this);
+                        int effectiveAddr = this.addressingMode.resolve(baseAddr, this); //
                         boolean writeFlag = Boolean.parseBoolean(parts[3]);
                         if (writeFlag) {
-                            bus.transfer(registerFile, parts[1], memory, effectiveAddr);
+                            bus.transfer(registerFile, parts[1], memory, effectiveAddr); //
                         } else {
-                            bus.transfer(memory, effectiveAddr, registerFile, parts[1]);
+                            bus.transfer(memory, effectiveAddr, registerFile, parts[1]); //
                         }
                     } catch (NumberFormatException e) {
                         System.err.println("[CPU] Dirección base inválida para MOV_RAM: " + parts[2] + " en \"" + rawInstruction + "\"");
@@ -183,7 +219,7 @@ public class CPU {
                                 System.err.println("[CPU] Dirección de JMP inválida (fuera de rango): " + addr + " en \"" + rawInstruction + "\"");
                                 this.halted = true;
                             } else {
-                                pc.set(addr);
+                                pc.set(addr); //
                                 System.out.println("[CPU] JMP a " + addr);
                             }
                         } catch (NumberFormatException e) {
@@ -198,10 +234,10 @@ public class CPU {
                         System.err.println("[CPU] Instrucción CMP inválida: " + rawInstruction);
                         this.halted = true; break;
                     }
-                    int a = registerFile.read(parts[1]);
-                    int b = registerFile.read(parts[2]);
+                    int a = registerFile.read(parts[1]); //
+                    int b = registerFile.read(parts[2]); //
                     int cmpResult = Integer.compare(a, b);
-                    interruptManager.request(cmpResult);
+                    interruptManager.request(cmpResult); //
                     System.out.printf("[CPU] CMP %s(%d) %s(%d), resultado=%d%n", parts[1], a, parts[2], b, cmpResult);
                     break;
                 }
@@ -210,8 +246,8 @@ public class CPU {
                         System.err.println("[CPU] Instrucción " + mnemonic + " inválida (falta dirección): " + rawInstruction);
                         this.halted = true; break;
                     }
-                    if (interruptManager.hasPending()) {
-                        int cmpResult = interruptManager.queue.peek();
+                    if (interruptManager.hasPending()) { //
+                        int cmpResult = interruptManager.queue.peek(); //
                         boolean jump = false;
                         switch (mnemonic) {
                             case "JE":  jump = (cmpResult == 0); break;
@@ -226,7 +262,7 @@ public class CPU {
                                     System.err.println("[CPU] Dirección de " + mnemonic + " inválida (fuera de rango): " + addr + " en \"" + rawInstruction + "\"");
                                     this.halted = true;
                                 } else {
-                                    pc.set(addr);
+                                    pc.set(addr); //
                                     System.out.printf("[CPU] %s salto a %d (basado en CMP previo resultado=%d)%n", mnemonic, addr, cmpResult);
                                 }
                             } catch (NumberFormatException e) {
@@ -234,7 +270,7 @@ public class CPU {
                                 this.halted = true;
                             }
                         }
-                        interruptManager.queue.poll();
+                        interruptManager.queue.poll(); //
                     } else {
                         System.err.println("[CPU] " + mnemonic + " ejecutado sin un CMP previo pendiente. (" + rawInstruction + ")");
                     }
@@ -245,16 +281,17 @@ public class CPU {
                         System.err.println("[CPU] No hay dispositivo de entrada (0) disponible o configurado.");
                         this.halted = true; break;
                     }
-                    int ch = ioDevices.get(0).read();
-                    if (ch == -1 && "EOF".equals(ioDevices.get(0).getStatus())) {
+                    IODevice currentInputDevice = ioDevices.get(0);
+                    int ch = currentInputDevice.read(); //
+                    if (ch == -1 && "EOF".equals(currentInputDevice.getStatus())) { //
                         System.out.println("[CPU] INPUT_CHAR: EOF alcanzado. ACC se establece a -1.");
-                        registerFile.write("ACC", -1);
-                    } else if ("ERROR".equals(ioDevices.get(0).getStatus())) {
+                        registerFile.write("ACC", -1); //
+                    } else if ("ERROR".equals(currentInputDevice.getStatus())) { //
                         System.err.println("[CPU] INPUT_CHAR: Error en dispositivo de entrada.");
                         this.halted = true;
                     }
                     else {
-                        registerFile.write("ACC", ch);
+                        registerFile.write("ACC", ch); //
                         System.out.printf("[CPU] INPUT_CHAR -> ACC(%d) '%c'%n", ch, (char) ch);
                     }
                     break;
@@ -264,11 +301,11 @@ public class CPU {
                         System.err.println("[CPU] No hay dispositivo de salida (1) disponible o configurado.");
                         this.halted = true; break;
                     }
-                    int ch = registerFile.read("ACC");
+                    int ch = registerFile.read("ACC"); //
                     if (ch == -1) {
                         System.out.println("[CPU] OUTPUT_CHAR: ACC es -1 (probablemente EOF), no se envía salida.");
                     } else {
-                        ioDevices.get(1).write(ch);
+                        ioDevices.get(1).write(ch); //
                         System.out.printf("[CPU] OUTPUT_CHAR desde ACC(%d) '%c'%n", ch, (char) ch);
                     }
                     break;
@@ -284,77 +321,104 @@ public class CPU {
                     break;
             }
 
-            if (halted && !mnemonic.equals("HLT")) {
-                System.out.println("[CPU] CPU detenida debido a un error en la instrucción: " + rawInstruction);
+            if (halted && !mnemonic.equals("HLT") && !rawInstruction.trim().isEmpty()) {
+                System.out.println("[CPU] CPU detenida debido a un error o condición en la instrucción: " + rawInstruction);
             }
 
-            interruptManager.process();
+            interruptManager.process(); //
 
         } catch (IllegalArgumentException e) {
-            System.err.println("[CPU] Error crítico en ciclo de ejecución: Mnemónico desconocido para OpCode - " + e.getMessage() + " en \"" + ir.get() + "\"");
+            System.err.println("[CPU] Error crítico en ciclo de ejecución: Mnemónico desconocido para OpCode - " + e.getMessage() + " en \"" + (ir != null ? ir.get() : "desconocida") + "\""); //
             e.printStackTrace();
             this.halted = true;
         } catch (Exception e) {
-            System.err.println("[CPU] Error crítico en ciclo de ejecución: " + e.getMessage() + " (Instrucción: \"" + (ir != null ? ir.get() : "desconocida") + "\")");
+            System.err.println("[CPU] Error crítico en ciclo de ejecución: " + e.getMessage() + " (Instrucción: \"" + (ir != null ? ir.get() : "desconocida") + "\")"); //
             e.printStackTrace();
             this.halted = true;
         }
     }
 
     private String memoryReadInstruction(int addr) {
-        if (instructionMemory == null) {
+        if (instructionMemory == null || instructionMemory.isEmpty()) { // Añadida comprobación de isEmpty
+            // No imprimir error aquí, executeCycle lo manejará.
             return null;
         }
         if (addr < 0 || addr >= instructionMemory.size()) {
+            // No imprimir error aquí, executeCycle lo manejará.
             return null;
         }
         return instructionMemory.get(addr);
     }
 
     // --- INICIO: GETTERS PARA EL CONTROLADOR Y LA VISTA ---
-    public ProgramCounter getPC() { // Devuelve el objeto PC
+    public ProgramCounter getPC() {
         return this.pc;
     }
 
-    public IR getIR() { // Devuelve el objeto IR
+    public IR getIR() {
         return this.ir;
     }
 
-    public RegisterFile getRegisterFile() { // Devuelve el objeto RegisterFile
+    public RegisterFile getRegisterFile() {
         return this.registerFile;
     }
 
-    public Memory getMemory() { // Devuelve el objeto Memory (este ya lo tenías)
+    public Memory getMemory() { // Este ya existía
         return this.memory;
     }
 
-    public ALU getAlu() { // Devuelve el objeto ALU
+    public ALU getAlu() {
         return this.alu;
     }
 
-    public MBR getMBR() { // Getter para MBR
+    public MBR getMBR() {
         return this.mbr;
     }
 
-    public MAR getMAR() { // Getter para MAR
+    public MAR getMAR() {
         return this.mar;
     }
 
-    public ControlWiredOrMicro getControlType() { // Getter para ControlType (ya lo tenías)
+    public ControlWiredOrMicro getControlType() { // Este ya existía
         return this.controlType;
     }
 
-    // Getters para valores específicos (alternativa o complemento a devolver objetos)
+    // Getters para valores específicos que pueden ser útiles directamente
     public int getPCValue() {
-        return this.pc.get();
+        return this.pc.get(); //
     }
 
     public String getIRValue() {
-        return this.ir.get();
+        if (this.ir == null) return null; // salvaguarda
+        return this.ir.get(); //
     }
 
-    public int getACCValue() { // Ejemplo para un registro específico como ACC
-        return this.registerFile.read("ACC");
+    public int getACCValue() {
+        return this.registerFile.read("ACC"); //
     }
     // --- FIN: GETTERS ---
+
+    public void setIoDevicesList(List<IODevice> devices) {
+        if (devices == null) {
+            this.ioDevices = new ArrayList<>(); // Evitar NullPointerException si se pasa null
+        } else {
+            // Es una buena práctica crear una nueva lista para evitar que modificaciones
+            // externas a la lista 'devices' afecten inesperadamente a la CPU.
+            this.ioDevices = new ArrayList<>(devices);
+        }
+
+        // Log para confirmar que los dispositivos se han establecido
+        if (this.ioDevices != null) {
+            System.out.println("[CPU] I/O Devices actualizados. Número de dispositivos: " + this.ioDevices.size());
+            // Opcional: imprimir IDs para verificar
+            if (this.ioDevices.size() > 0 && this.ioDevices.get(0) != null) {
+                System.out.println("[CPU] Input device (0) ID: " + this.ioDevices.get(0).getId());
+            }
+            if (this.ioDevices.size() > 1 && this.ioDevices.get(1) != null) {
+                System.out.println("[CPU] Output device (1) ID: " + this.ioDevices.get(1).getId());
+            }
+        } else {
+            System.out.println("[CPU] Advertencia: La lista de I/O Devices es null después de intentar establecerla.");
+        }
+    }
 }
