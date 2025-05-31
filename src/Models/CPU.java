@@ -64,6 +64,8 @@ public class CPU {
         microprogramData.put("JNE", new String[]{"Cond_Jump_if_Not_Zero"});
         microprogramData.put("HLT", new String[]{"HALT_CPU"});
         microprogramData.put("MUL", new String[]{"Decode_Operands_R_R_R","Reg1_to_ALU_A,Reg2_to_ALU_B","ALU_MUL,MBR_in","MBR_out,Reg_Dest_in"});
+        microprogramData.put("STORE", new String[]{"Decode_Store_Operands_Rsrc_AddrImm", "Reg_Operand1_to_MBR", "Immediate_Operand2_to_MAR", "MBR_to_Mem_at_MAR"                });
+        microprogramData.put("LOAD_REG_IMM", new String[]{"Decode_Load_Rdest_AddrImm", "LoadAddr_Operand1_to_MAR", "MemRead_MAR_to_MBR", "WriteMBR_to_Reg_Destination"});
         // Añade aquí los microprogramas para las demás instrucciones (MUL, DIV, JGE, etc.)
 
         this.controlType.loadMicroprogram(microprogramData);
@@ -221,6 +223,55 @@ public class CPU {
                 registerFile.write(destination, mbr.get(), description);
                 break;
             }
+            case "Decode_Store_Operands_Rsrc_AddrImm":
+                if (parts.length > 2) {
+                    this.operand1 = parts[1]; // R_src
+                    this.operand2 = parts[2]; // Addr_imm
+                } else {
+                    // Manejar error de operandos insuficientes si es necesario
+                    this.haltReason = "Error: Operandos insuficientes para STORE_REG_IMM.";
+                    this.halted = true;
+                    currentMicroprogram = new String[0]; // Evitar NullPointerException
+                }
+                break;
+
+            // --- SEÑALES DE EJECUCIÓN PARA STORE_REG_IMM ---
+            case "Reg_Operand1_to_MBR":
+                if (this.operand1 != null) {
+                    mbr.load(registerFile.read(this.operand1));
+                } else {
+                    this.haltReason = "Error: Operando fuente (Reg_Operand1) nulo para STORE_REG_IMM.";
+                    this.halted = true;
+                    currentMicroprogram = new String[0];
+                }
+                break;
+
+            case "Immediate_Operand2_to_MAR":
+                if (this.operand2 != null) {
+                    try {
+                        mar.load(Integer.parseInt(this.operand2));
+                    } catch (NumberFormatException e) {
+                        this.haltReason = "Error: Dirección inmediata (Operand2) inválida para STORE_REG_IMM: " + this.operand2;
+                        this.halted = true;
+                        currentMicroprogram = new String[0];
+                    }
+                } else {
+                    this.haltReason = "Error: Operando de dirección (Operand2) nulo para STORE_REG_IMM.";
+                    this.halted = true;
+                    currentMicroprogram = new String[0];
+                }
+                break;
+
+            case "MBR_to_Mem_at_MAR":
+                try {
+                    memory.write(mar.get(), mbr.get());
+                    System.out.printf("[CPU] STORE Mem[0x%04X] <- %d (desde MBR)%n", mar.get(), mbr.get());
+                } catch (IndexOutOfBoundsException e) {
+                    this.haltReason = "Error: Acceso fuera de los límites de la memoria en STORE_REG_IMM. Dirección: " + mar.get();
+                    this.halted = true;
+                    currentMicroprogram = new String[0];
+                }
+                break;
             case "Immediate_to_MBR":
                 mbr.load(Integer.parseInt(operand1));
                 break;
@@ -257,6 +308,54 @@ public class CPU {
             case "HALT_CPU":
                 this.haltReason = "Ejecución finalizada correctamente por instrucción HLT."; // <-- MENSAJE DE ÉXITO
                 this.halted = true;
+                break;
+            case "Decode_Load_Rdest_AddrImm":
+                if (parts.length > 2) {
+                    this.destination = parts[1]; // R_dest
+                    this.operand1 = parts[2];    // Addr_imm
+                } else {
+                    this.haltReason = "Error: Operandos insuficientes para LOAD_REG_IMM.";
+                    this.halted = true;
+                    currentMicroprogram = new String[0]; // Evitar NullPointerException
+                }
+                break;
+
+            case "LoadAddr_Operand1_to_MAR":
+                if (this.operand1 != null) {
+                    try {
+                        mar.load(Integer.parseInt(this.operand1)); // this.operand1 contiene Addr_imm
+                    } catch (NumberFormatException e) {
+                        this.haltReason = "Error: Dirección inmediata (Operand1) inválida para LOAD_REG_IMM: " + this.operand1;
+                        this.halted = true;
+                        currentMicroprogram = new String[0];
+                    }
+                } else {
+                    this.haltReason = "Error: Operando de dirección (Operand1) nulo para LOAD_REG_IMM.";
+                    this.halted = true;
+                    currentMicroprogram = new String[0];
+                }
+                break;
+
+            case "MemRead_MAR_to_MBR":
+                try {
+                    mbr.load(memory.read(mar.get()));
+                    System.out.printf("[CPU] LOAD MBR <- Mem[0x%04X] (valor: %d)%n", mar.get(), mbr.get());
+                } catch (IndexOutOfBoundsException e) {
+                    this.haltReason = "Error: Acceso fuera de los límites de la memoria en LOAD_REG_IMM. Dirección: " + mar.get();
+                    this.halted = true;
+                    currentMicroprogram = new String[0];
+                }
+                break;
+
+            case "WriteMBR_to_Reg_Destination":
+                if (this.destination != null) {
+                    String description = String.format("(Cargado desde Mem[0x%04X])", mar.get());
+                    registerFile.write(this.destination, mbr.get(), description); // this.destination contiene R_dest
+                } else {
+                    this.haltReason = "Error: Registro destino (destination) nulo para LOAD_REG_IMM.";
+                    this.halted = true;
+                    currentMicroprogram = new String[0];
+                }
                 break;
 
             default:

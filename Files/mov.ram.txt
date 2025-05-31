@@ -1,0 +1,15 @@
+// Prueba de MOV_RAM
+MOV_IMM R1 99      // Cargar 99 en R1
+MOV_IMM R2 11      // R2 tendrá la dirección de memoria (11 decimal, 0xB hex)
+
+// Escribir el valor de R1 (99) en la dirección de memoria apuntada por R2 (que es 11 o 0xB)
+// Sintaxis: MOV_RAM <Registro_Datos> <Dirección_Memoria> <EsEscrituraTrue_EsLecturaFalse>
+MOV_RAM R1 11 true   // R1 (99) -> Mem[11]
+
+// Limpiar R1 para verificar la lectura
+MOV_IMM R1 0
+
+// Leer el valor de la dirección de memoria 11 y cargarlo en R1
+MOV_RAM R1 0xB false  // Mem[11] -> R1 (usando dirección hexadecimal para variar)
+
+HLT

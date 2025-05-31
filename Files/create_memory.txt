@@ -1,0 +1,30 @@
+// --- Prueba de Escritura en Memoria de Datos ---
+// Usa la instrucción hipotética STORE R_fuente Direccion_memoria_inmediata
+
+// 1. Cargar valores iniciales en registros.
+MOV_IMM R1 111  // Valor a guardar en memoria
+MOV_IMM R2 222  // Otro valor
+MOV_IMM R3 42   // Dirección de memoria
+MOV_IMM R4 50   // Otra dirección de memoria
+
+// 2. Guardar el contenido de R1 en la dirección de memoria 100.
+STORE R1 100  // Mem[100] = 111
+
+// 3. Guardar el contenido de R2 en la dirección de memoria 105.
+STORE R2 105  // Mem[105] = 222
+
+// 4. Guardar el contenido de R1 en la dirección de memoria que está en R3 (42).
+// Nota: La instrucción STORE propuesta usa una dirección inmediata.
+// Para usar una dirección de un registro, necesitarías otra instrucción como STORE_REG_REG.
+// Por ahora, usaremos direcciones inmediatas:
+STORE R1 42   // Mem[42] = 111
+
+// 5. Guardar el contenido de R2 en la dirección de memoria que está en R4 (50).
+STORE R2 50   // Mem[50] = 222
+
+// 6. Modificar R1 y guardarlo en otra dirección.
+MOV_IMM R1 999
+STORE R1 110  // Mem[110] = 999
+
+// 7. Detener la ejecución.
+HLT

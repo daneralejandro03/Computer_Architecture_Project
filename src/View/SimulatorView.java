@@ -283,7 +283,7 @@ public class SimulatorView extends JFrame {
         // Actualizar Memoria (mostrar un rango, por ejemplo, las primeras 64 posiciones)
         StringBuilder memText = new StringBuilder();
         if (memory != null) {
-            int displaySize = Math.min(64, memory.getSize()); // Mostrar hasta 64 o el tamaño real
+            int displaySize = Math.min(128, memory.getSize()); // Mostrar hasta 64 o el tamaño real
             for (int i = 0; i < displaySize; i++) {
                 // Formato: [dirección_hex]: valor_decimal (valor_hex)
                 memText.append(String.format("[%04X]: %-5d (%04X)\n", i, memory.read(i), memory.read(i) & 0xFFFF));
