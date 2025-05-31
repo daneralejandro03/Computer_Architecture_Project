@@ -5,55 +5,47 @@ import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
 
-/**
- * Banco de registros de propósito general.
- * Permite lectura/escritura por nombre, borrado y consulta de registros.
- */
 public class RegisterFile {
-    private final Map<String, Integer> regs = new HashMap<>();
+
+    // --- Clase interna para almacenar el valor y su procedencia ---
+    public static class RegisterInfo {
+        public final int value;
+        public final String description;
+
+        public RegisterInfo(int value, String description) {
+            this.value = value;
+            this.description = description;
+        }
+    }
+
+    private final Map<String, RegisterInfo> regs = new HashMap<>();
 
     /**
-     * Lee el valor de un registro; devuelve 0 si no existe.
-     *
-     * @param name Nombre del registro (sensible a mayúsculas).
-     * @return Valor almacenado o 0.
+     * Lee solo el valor numérico de un registro.
      */
     public int read(String name) {
-        return regs.getOrDefault(name, 0);
+        RegisterInfo info = regs.get(name);
+        return (info != null) ? info.value : 0;
     }
 
     /**
-     * Escribe un valor en el registro; crea el registro si no existía.
-     *
-     * @param name Nombre del registro.
-     * @param val  Valor a escribir.
+     * Obtiene el objeto completo con valor y descripción.
      */
-    public void write(String name, int val) {
-        regs.put(name, val);
+    public RegisterInfo getRegisterInfo(String name) {
+        return regs.get(name);
     }
 
     /**
-     * Elimina todos los registros, reseteando el banco.
+     * Escribe un valor y su descripción en un registro.
      */
+    public void write(String name, int val, String description) {
+        regs.put(name, new RegisterInfo(val, description));
+    }
+
     public void clear() {
         regs.clear();
     }
 
-    /**
-     * Comprueba si el registro existe en el banco.
-     *
-     * @param name Nombre del registro.
-     * @return true si el registro fue escrito antes.
-     */
-    public boolean hasRegister(String name) {
-        return regs.containsKey(name);
-    }
-
-    /**
-     * Obtiene un conjunto inmodificable con todos los nombres de registros existentes.
-     *
-     * @return Set de nombres de registros.
-     */
     public Set<String> getRegisterNames() {
         return Collections.unmodifiableSet(regs.keySet());
     }

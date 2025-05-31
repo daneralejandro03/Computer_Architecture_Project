@@ -12,12 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 // No se necesita Map aquí a menos que el controlador mismo manipule mapas de microprogramas.
 
-public class SimulatorController {
+public class OldSimulatodController {
     private CPU cpuModel;
     private SimulatorView mainView;
     private List<String> lastLoadedProgram = new ArrayList<>(); // Para la función de reset
 
-    public SimulatorController(CPU model, SimulatorView view) {
+    public OldSimulatodController(CPU model, SimulatorView view) {
         this.cpuModel = model;
         this.mainView = view;
         // Actualiza la vista con el estado inicial del modelo (CPU vacía o con programa por defecto)
@@ -83,7 +83,7 @@ public class SimulatorController {
                 // Para actualizar la GUI desde otro hilo, usa SwingUtilities.invokeLater
                 javax.swing.SwingUtilities.invokeLater(this::updateView);
                 try {
-                    Thread.sleep(20); // Pequeña pausa para visualización (ajustable)
+                    Thread.sleep(100); // Pequeña pausa para visualización (ajustable)
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt(); // Restaurar estado de interrupción
                     javax.swing.SwingUtilities.invokeLater(() -> mainView.showMessage("Ejecución interrumpida."));
@@ -93,11 +93,10 @@ public class SimulatorController {
             // Cuando termina el bucle (halted o interrumpido)
             javax.swing.SwingUtilities.invokeLater(() -> {
                 if (cpuModel.isHalted()) {
-                    // Obtenemos el mensaje específico desde la CPU
-                    mainView.showMessage(cpuModel.getHaltReason());
+                    mainView.showMessage("CPU completó la ejecución o se detuvo.");
                 }
-                updateView();
-                mainView.setExecutionControlsEnabled(true);
+                updateView(); // Una última actualización para el estado final
+                mainView.setExecutionControlsEnabled(true); // Rehabilitar botones
             });
         }).start();
     }

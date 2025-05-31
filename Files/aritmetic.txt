@@ -1,0 +1,13 @@
+// Programa para probar la suma: 10 + 25 = 35
+
+// 1. Cargar el valor 10 en el registro R1
+MOV_IMM R1 10
+
+// 2. Cargar el valor 25 en el registro R2
+MOV_IMM R2 25
+
+// 3. Sumar R1 y R2, y guardar el resultado en R3
+ADD R1 R2 R3
+
+// 4. Detener el programa
+HLT

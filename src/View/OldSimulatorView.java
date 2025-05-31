@@ -11,7 +11,7 @@ import java.awt.*;
 // Eliminado Map ya que RegisterFile.getRegisterNames() y read() son suficientes para el JTextArea
 import javax.swing.filechooser.FileNameExtensionFilter; // Para filtrar archivos
 
-public class SimulatorView extends JFrame {
+public class OldSimulatorView extends JFrame {
     private SimulatorController controller;
 
     // Componentes de la GUI - Panel de Control
@@ -40,7 +40,7 @@ public class SimulatorView extends JFrame {
     private JTextField inputField; // Para la entrada del usuario (podría ser mejorado)
     private JButton submitInputButton; // Botón para enviar la entrada del inputField
 
-    public SimulatorView() {
+    public OldSimulatorView() {
         setTitle("Simulador CPU Gráfico");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700); // Un poco más grande para acomodar más info
@@ -254,15 +254,9 @@ public class SimulatorView extends JFrame {
             java.util.List<String> sortedRegNames = new java.util.ArrayList<>(registers.getRegisterNames());
             java.util.Collections.sort(sortedRegNames);
 
-            // CÓDIGO MEJORADO
             for (String regName : sortedRegNames) {
-                if (!regName.equals("ACC")) { // ACC se maneja por separado
-                    Models.RegisterFile.RegisterInfo info = registers.getRegisterInfo(regName);
-                    if (info != null) {
-                        // Formato: "R5  : 25      (SUB R4, R3)"
-                        String description = info.description != null ? info.description : "";
-                        regText.append(String.format("%-4s: %-8d %s\n", regName, info.value, description));
-                    }
+                if (!regName.equals("ACC")) { // Ya mostramos ACC por separado
+                    regText.append(String.format("%-4s: %d\n", regName, registers.read(regName)));
                 }
             }
             registersArea.setText(regText.toString());

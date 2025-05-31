@@ -1,0 +1,7 @@
+// Este programa intenta usar la instrucción "MOVI" que no existe.
+// La instrucción correcta es "MOV_IMM".
+
+MOV_IMM R1 10
+MOVI R2 20  // <-- ERROR AQUÍ
+ADD R1 R2 R3
+HLT

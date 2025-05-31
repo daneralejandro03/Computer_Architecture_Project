@@ -1,0 +1,16 @@
+// --- Prueba Aritmética Avanzada: (7 * 5) - 10 ---
+// El resultado final (25) quedará en el registro R5.
+
+// 1. Cargar los valores iniciales en los registros R1, R2 y R3.
+MOV_IMM R1 7
+MOV_IMM R2 5
+MOV_IMM R3 10
+
+// 2. Multiplicar R1 por R2. El resultado intermedio (35) se guardará en R4.
+MUL R1 R2 R4
+
+// 3. Restar R3 del resultado anterior (R4). El resultado final (25) se guardará en R5.
+SUB R4 R3 R5
+
+// 4. Detener la ejecución.
+HLT
